@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.311';
+our $VERSION = '0.312';
 
 use Carp       qw( croak carp );
 use Encode     qw( encode );
@@ -64,7 +64,7 @@ sub __set_defaults {
     #$self->{no_echo}         = undef;
     $self->{default}          = '';
     $self->{clear_screen}     = 0;
-    $self->{info_on_top}      = '';                # experimental # name
+    $self->{info}             = '';
     #$self->{prompt}          = undef;
     #$self->{mark_curr}       = undef;             # experimental
     $self->{auto_up}          = 0;
@@ -136,7 +136,7 @@ sub config {
             compat          => '[ 0 1 ]',
             confirm         => '',
             default         => '',
-            info_on_top     => '',          # experimental
+            info            => '',
             no_echo         => '[ 0 1 2 ]',
             mark_curr       => '[ 0 1 ]',   # experimental
             prompt          => '',
@@ -171,14 +171,15 @@ sub readline {
     my $valid = {
         clear_screen => '[ 0 1 ]',
         default      => '',
-        info_on_top  => '',        # experimental # name
+        info         => '',
         no_echo      => '[ 0 1 2 ]',
     };
     $self->__validate_options( $opt, $valid );
     $opt->{default}      = $self->{default}      if ! defined $opt->{default};
     $opt->{no_echo}      = $self->{no_echo}      if ! defined $opt->{no_echo};
     $opt->{clear_screen} = $self->{clear_screen} if ! defined $opt->{clear_screen};
-    $self->{i}{info_text}       = $opt->{info_on_top};
+    $opt->{info}         = $self->{info}         if ! defined $opt->{info};
+    $self->{i}{info_text}       = $opt->{info};
     $self->{i}{sep}             = '';
     $self->{i}{curr_row}        = 0;
     $self->{i}{length_key}[0]   = Unicode::GCString->new( $prompt )->columns;
@@ -200,7 +201,7 @@ sub readline {
         my ( $term_width ) = $self->{plugin}->__term_buff_size();
         $self->{i}{avail_width} = $term_width - 1;
         $self->{i}{avail_width_value} = $self->{i}{avail_width} - $self->{i}{length_prompt};
-        if ( $self->{i}{info_text} ) { # experimental
+        if ( $self->{i}{info_text} ) {
             $self->{plugin}->__up( $self->{i}{info_row_count} );
             $self->{plugin}->__clear_lines_to_end_of_screen();
             $self->__info_text_row_count();
@@ -556,7 +557,7 @@ sub fill_form {
         back         => '',
         clear_screen => '[ 0 1 ]',
         confirm      => '',
-        info_on_top  => '',             # experimental # name
+        info         => '',
         mark_curr    => '[ 0 1 ]',
         prompt       => '',
         ro           => 'ARRAY', ##
@@ -564,14 +565,14 @@ sub fill_form {
     };
     $self->__validate_options( $opt, $valid );
     $opt->{prompt}       = $self->{prompt}       if ! defined $opt->{prompt};
-    $opt->{info_on_top}  = $self->{info_on_top}  if ! defined $opt->{info_on_top};  # experimental
+    $opt->{info}         = $self->{info}         if ! defined $opt->{info};
     $opt->{back}         = $self->{back}         if ! defined $opt->{back};
     $opt->{confirm}      = $self->{confirm}      if ! defined $opt->{confirm};
     $opt->{auto_up}      = $self->{auto_up}      if ! defined $opt->{auto_up};
-    $opt->{read_only}    = $opt->{ro}            if ! defined $opt->{read_only};  ##
+    $opt->{read_only}    = $opt->{ro}            if ! defined $opt->{read_only};
     $opt->{read_only}    = $self->{read_only}    if ! defined $opt->{read_only};
     $opt->{clear_screen} = $self->{clear_screen} if ! defined $opt->{clear_screen};
-    $self->{i}{info_text}  = $opt->{info_on_top};
+    $self->{i}{info_text}  = $opt->{info};
     if ( defined $opt->{prompt} ) {
         $self->{i}{info_text} .= "\n" if length $self->{i}{info_text} && length $opt->{prompt};
         $self->{i}{info_text} .= $opt->{prompt};
@@ -947,7 +948,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.311
+Version 0.312
 
 =cut
 
@@ -1073,6 +1074,12 @@ default: disabled
 
 =item
 
+info
+
+Expects as is value a string. If set, the string is printed on top of the output of C<readline>.
+
+=item
+
 default
 
 Set a initial value of input.
@@ -1104,6 +1111,20 @@ as the default value for the "readline" (initial value of input).
 The optional second argument is a hash-reference. The keys/options are
 
 =over
+
+=item
+
+clear_screen
+
+If enabled, the screen is cleared before the output.
+
+default: disabled
+
+=item
+
+info
+
+Expects as is value a string. If set, the string is printed on top of the output of C<fill_form>.
 
 =item
 
