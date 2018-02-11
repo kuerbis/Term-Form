@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.312';
+our $VERSION = '0.313';
 
 use Carp       qw( croak carp );
 use Encode     qw( encode );
@@ -201,11 +201,11 @@ sub readline {
         my ( $term_width ) = $self->{plugin}->__term_buff_size();
         $self->{i}{avail_width} = $term_width - 1;
         $self->{i}{avail_width_value} = $self->{i}{avail_width} - $self->{i}{length_prompt};
-        if ( $self->{i}{info_text} ) {
+        if ( length $self->{i}{info_text} ) {
             $self->{plugin}->__up( $self->{i}{info_row_count} );
             $self->{plugin}->__clear_lines_to_end_of_screen();
             $self->__info_text_row_count();
-            print "\r", $self->{i}{info_text} . "\n";
+            print "\r", $self->{i}{info_text};
         }
         $self->__print_readline( $opt, $list, $str, $pos );
         my $key = $self->{plugin}->__get_key();
@@ -416,7 +416,7 @@ sub __prepare_size {
 }
 
 
-sub __info_text_row_count {
+sub __info_text_row_count { # name
     my ( $self ) = @_;
     $self->{i}{info_row_count} = 0;
     my $info_text = $self->{i}{info_text};
@@ -439,8 +439,7 @@ sub __info_text_row_count {
         #else {
             $self->{i}{info_text} = $line_fold->fold( $info_text, 'PLAIN' );
         #}
-        $self->{i}{info_text} =~ s/\n\z//;
-        $self->{i}{info_row_count} = $self->{i}{info_text} =~ s/\n/\n/g; # #
+        $self->{i}{info_row_count} = $self->{i}{info_text} =~ s/\n/\n/g;
         $self->{i}{info_row_count} += 1;
     }
 }
@@ -948,7 +947,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.312
+Version 0.313
 
 =cut
 
