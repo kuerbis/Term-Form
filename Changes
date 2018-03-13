@@ -1,6 +1,9 @@
 Revision history for Term::Form
 
 
+0.315   2018-03-13
+        - "readline": trim prompt if it is to long.
+
 0.314   2018-03-12
         - Bugfix "readline"  with 'info'.
         - "readline": after returning the output is removed.

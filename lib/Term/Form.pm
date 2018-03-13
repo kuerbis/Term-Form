@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.314';
+our $VERSION = '0.315';
 
 use Carp       qw( croak carp );
 use Encode     qw( encode );
@@ -107,7 +107,7 @@ sub __validate_options {
 
 
 sub __init_term {
-    my ( $self, $hide_cursor ) = @_; # hide_cursor xxxx
+    my ( $self, $hide_cursor ) = @_;
     $self->{plugin}->__set_mode( $hide_cursor );
     if ( $self->{reinit_encoding} ) {
         Encode::Locale::reinit( $self->{reinit_encoding} );
@@ -185,14 +185,13 @@ sub readline {
     $self->{i}{curr_row}        = 0;
     $self->{i}{length_key}[0]   = Unicode::GCString->new( $prompt )->columns;
     $self->{i}{len_longest_key} = $self->{i}{length_key}[0];
-    $self->{i}{length_prompt}   = $self->{i}{len_longest_key} + length $self->{i}{sep};
     my $list = [ [ $prompt, $self->{default} ] ];
     my $str = Unicode::GCString->new( $opt->{default} );
     my $pos = $str->length();
     local $| = 1;
     $self->__init_term();
     $self->{plugin}->__clear_screen() if $opt->{clear_screen};
-    $self->{i}{pre_row_count} = 0;
+    $self->{i}{pre_text_row_count} = 0;
 
     while ( 1 ) {
         if ( $self->{i}{beep} ) {
@@ -201,9 +200,13 @@ sub readline {
         }
         my ( $term_w, $term_h ) = $self->{plugin}->__term_buff_size();
         $self->{i}{avail_width} = $term_w - 1;
+        if ( $self->{i}{len_longest_key} > $self->{i}{avail_width} / 3 ) {
+            $self->{i}{len_longest_key} = int( $self->{i}{avail_width} / 3 );
+        }
+        $self->{i}{length_prompt} = $self->{i}{len_longest_key} + length $self->{i}{sep};
         $self->{i}{avail_width_value} = $self->{i}{avail_width} - $self->{i}{length_prompt};
         if ( defined $self->{i}{pre_text} ) { # empty info add newline
-            $self->{plugin}->__up( $self->{i}{pre_row_count} );
+            $self->{plugin}->__up( $self->{i}{pre_text_row_count} );
             $self->{plugin}->__clear_lines_to_end_of_screen();
             $self->__pre_text_row_count();
             print "\r", $self->{i}{pre_text}, "\n";
@@ -298,7 +301,7 @@ sub readline {
             utf8::upgrade $key;
             if ( $key eq "\n" || $key eq "\r" ) { #
                 print "\n";
-                $self->{plugin}->__up( $self->{i}{pre_row_count} + 1 );
+                $self->{plugin}->__up( $self->{i}{pre_text_row_count} + 1 );
                 $self->{plugin}->__clear_lines_to_end_of_screen();
                 $self->__reset_term();
                 if ( $self->{compat} || ! defined $self->{compat} && $ENV{READLINE_SIMPLE_COMPAT} ) {
@@ -386,13 +389,13 @@ sub __length_longest_key {
 
 sub __pre_text_row_count {
     my ( $self ) = @_;
-    $self->{i}{pre_row_count} = 0;
+    $self->{i}{pre_text_row_count} = 0;
     if ( ! defined $self->{i}{pre_text} ) {  # empty info add newline
         return;
     }
     $self->{i}{pre_text} = line_fold( $self->{i}{pre_text}, $self->{i}{avail_width}, 0, 0 );
-    $self->{i}{pre_row_count} = $self->{i}{pre_text} =~ s/\n/\n/g;
-    $self->{i}{pre_row_count} += 1;
+    $self->{i}{pre_text_row_count} = $self->{i}{pre_text} =~ s/\n/\n/g;
+    $self->{i}{pre_text_row_count} += 1;
 }
 
 
@@ -403,7 +406,7 @@ sub __prepare_size {
     if ( defined $self->{i}{pre_text} ) {
         $self->__pre_text_row_count();
         my $backup_height = $self->{i}{avail_height};
-        $self->{i}{avail_height} -= $self->{i}{pre_row_count};
+        $self->{i}{avail_height} -= $self->{i}{pre_text_row_count};
         my $min_avail_height = 5;
         if ( $self->{i}{avail_height} < $min_avail_height ) {
             if ( $backup_height > $min_avail_height ) {
@@ -415,7 +418,7 @@ sub __prepare_size {
         }
     }
     else {
-        $self->{i}{pre_row_count} = 0;
+        $self->{i}{pre_text_row_count} = 0;
     }
     if ( @$list > $self->{i}{avail_height} ) {
         $self->{i}{pages} = int @$list / ( $self->{i}{avail_height} - 1 );
@@ -513,7 +516,6 @@ sub __write_first_screen {
     $self->{i}{length_prompt} = $self->{i}{len_longest_key} + $len_separator;
     $self->{i}{avail_width_value} = $self->{i}{avail_width} - $self->{i}{length_prompt};
     $self->{i}{curr_row} = $auto_up == 2 ? $curr_row : @{$self->{i}{pre}};
-    #$self->{i}{curr_row} = $auto_up ? $curr_row : @{$self->{i}{pre}};
     $self->{i}{begin_row} = 0;
     $self->{i}{end_row}  = ( $self->{i}{avail_height} - 1 );
     if ( $self->{i}{end_row} > $#$list ) {
@@ -785,12 +787,12 @@ sub fill_form {
                 if ( $auto_up == 2 && $opt->{auto_up} == 1 && ! $self->{i}{lock_ENTER} ) {                              # a removed lock_ENTER resets "auto_up" from 2 to 1 if the 2 was originally a 1
                     $auto_up = 1;
                 }
-                if ( $auto_up == 1 && @$list - @{$self->{i}{pre}} == 1 ) {
+                if ( $auto_up == 1 && @$list - @{$self->{i}{pre}} == 1 ) {                                              # else auto_up 1 sticks on the last==first data row
                     $auto_up = 2;
                 }
                 $k = 0;                                                                                                 # if ENTER set $k to 0
                 my $up = $self->{i}{curr_row} - $self->{i}{begin_row};
-                $up += $self->{i}{pre_row_count} if $self->{i}{pre_row_count};
+                $up += $self->{i}{pre_text_row_count} if $self->{i}{pre_text_row_count};
                 if ( $list->[$self->{i}{curr_row}][0] eq $opt->{back} ) {                                               # if ENTER on   {back/0}: leave and return nothing
                     $self->{plugin}->__up( $up );
                     $self->{plugin}->__clear_lines_to_end_of_screen();
@@ -818,15 +820,12 @@ sub fill_form {
                     $self->{plugin}->__up( $up );
                     $self->{plugin}->__clear_lines_to_end_of_screen();
                     my $cursor = scalar @{$self->{i}{pre}};                                                             # cursor on the first data row
-                    if ( @$list - @{$self->{i}{pre}} == 1 && $auto_up == 1) {                                           # else auto_up 1 sticks on the last==first data row
-                        $cursor = 0;
-                    }
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     ( $str, $pos ) = $self->__gcstring_and_pos( $list );
                     $self->{i}{lock_ENTER} = 1;                                                                         # set lock_ENTER when jumped automatically from the {last row} to the {first data row/2}
                 }
                 else {
-                    if ( $auto_up == 1 && $self->{i}{curr_row} == @{$self->{i}{pre}} && $self->{i}{lock_ENTER} ) { # if ENTER && "auto_up" == 1 $$ "curr_row" == {first data row/2} && lock_ENTER is true:
+                    if ( $auto_up == 1 && $self->{i}{curr_row} == @{$self->{i}{pre}} && $self->{i}{lock_ENTER} ) {      # if ENTER && "auto_up" == 1 $$ "curr_row" == {first data row/2} && lock_ENTER is true:
                         $self->{i}{beep} = 1;                                                                           # set "auto_up" temporary to 2 so a second ENTER moves the cursor to {back/0}
                         $auto_up = 2;
                         next KEY;
@@ -915,11 +914,13 @@ sub __unicode_trim {
     $gcs->pos( 0 );
     my $cols = 0;
     my $gc;
+    my $dots = '...'; #
+    $dots .= ' ' if $gcs->as_string =~ /\ \z/;
     while ( defined( $gc = $gcs->next ) ) {
-        if ( ( $len - 3 ) < ( $cols += $gc->columns ) ) {
+        if ( ( $len - length( $dots ) ) < ( $cols += $gc->columns ) ) {
             my $ret = $gcs->substr( 0, $gcs->pos - 1 );
             $gcs->pos( $pos );
-            return $ret->as_string . '...';
+            return $ret->as_string . $dots;
         }
     }
 }
@@ -940,7 +941,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.314
+Version 0.315
 
 =cut
 
