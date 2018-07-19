@@ -8,15 +8,11 @@ my %prereqs_os_specific;
 my %test_prereqs_os_specific;
 if ( $^O eq 'MSWin32' ) {
     %prereqs_os_specific = (
+        'Encode'         => 0,
+        'Encode::Locale' => 0,
         'Win32::Console' => 0,
     );
 }
-else {
-    %prereqs_os_specific = (
-        'Term::ReadKey'  => 0,
-    );
-}
-
 
 WriteMakefile(
     PL_FILES         => {},
@@ -44,17 +40,19 @@ WriteMakefile(
         'Test::Fatal'           => 0,
     },
     PREREQ_PM => {
-        'constant'               => 0,
-        'strict'                 => 0,
-        'warnings'               => 0,
-        'Carp'                   => 0,
-        'Encode'                 => 0,
-        'Encode::Locale'         => 0,
-        'Exporter'               => 0,
-        'List::Util'             => '1.33',
-        'Term::Choose'           => '1.513',
-        'Term::Choose::LineFold' => '1.513',
-        'Unicode::GCString'      => 0,
+        'constant'                => 0,
+        'parent'                  => 0,
+        'strict'                  => 0,
+        'warnings'                => 0,
+        'Carp'                    => 0,
+        'Exporter'                => 0,
+        'List::Util'              => '1.33',
+        'Term::Choose'            => '1.607',
+        'Term::Choose::LineFold'  => '1.607',
+        'Term::Choose::Linux'     => '1.607',
+        'Term::Choose::Win32'     => '1.607',
+        'Term::Choose::Constants' => '1.607',
+        'Unicode::GCString'       => 0,
         %prereqs_os_specific,
     },
     dist  => {

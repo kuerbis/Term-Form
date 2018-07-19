@@ -5,7 +5,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.316';
+our $VERSION = '0.320';
 
 use Encode qw( decode );
 
@@ -14,7 +14,10 @@ use Win32::Console qw( STD_INPUT_HANDLE ENABLE_PROCESSED_INPUT STD_OUTPUT_HANDLE
                        RIGHT_ALT_PRESSED LEFT_ALT_PRESSED RIGHT_CTRL_PRESSED LEFT_CTRL_PRESSED SHIFT_PRESSED
                        FOREGROUND_INTENSITY BACKGROUND_INTENSITY );
 
-use Term::Form::Constants qw( :win32 );
+use Term::Choose::Constants qw( :win32 );
+
+use parent 'Term::Choose::Win32';
+
 
 
 sub new {
@@ -61,7 +64,7 @@ sub SHIFTED_MASK () {
     | SHIFT_PRESSED
 }
 
-sub __get_key {
+sub __get_key_OS {
     my ( $self ) = @_;
     my @event = $self->{input}->Input;
     my $event_type = shift @event;
@@ -76,15 +79,15 @@ sub __get_key {
             if ( $ctrl_key_state & SHIFTED_MASK ) {
                 return NEXT_get_key;
             }
-            elsif ( $v_key_code == VK_CODE_END )       { return VK_END }
-            elsif ( $v_key_code == VK_CODE_HOME )      { return VK_HOME }
-            elsif ( $v_key_code == VK_CODE_LEFT )      { return VK_LEFT }
-            elsif ( $v_key_code == VK_CODE_UP )        { return VK_UP }
-            elsif ( $v_key_code == VK_CODE_DOWN )      { return VK_DOWN }
-            elsif ( $v_key_code == VK_CODE_RIGHT )     { return VK_RIGHT }
-            elsif ( $v_key_code == VK_CODE_PAGE_UP )   { return VK_PAGE_UP }
-            elsif ( $v_key_code == VK_CODE_PAGE_DOWN ) { return VK_PAGE_DOWN }
-            elsif ( $v_key_code == VK_CODE_DELETE )    { return VK_DELETE }
+            elsif ( $v_key_code == VK_END )       { return VK_END }
+            elsif ( $v_key_code == VK_HOME )      { return VK_HOME }
+            elsif ( $v_key_code == VK_LEFT )      { return VK_LEFT }
+            elsif ( $v_key_code == VK_UP )        { return VK_UP }
+            elsif ( $v_key_code == VK_DOWN )      { return VK_DOWN }
+            elsif ( $v_key_code == VK_RIGHT )     { return VK_RIGHT }
+            elsif ( $v_key_code == VK_PAGE_UP )   { return VK_PAGE_UP }
+            elsif ( $v_key_code == VK_PAGE_DOWN ) { return VK_PAGE_DOWN }
+            elsif ( $v_key_code == VK_DELETE )    { return VK_DELETE }
             else {
                 return NEXT_get_key;
             }
@@ -96,29 +99,12 @@ sub __get_key {
 }
 
 
-sub __term_buff_size {
-    my ( $self ) = @_;
-    my ( $term_width, $term_height ) = $self->{output}->MaxWindow();
-    return $term_width - 1, $term_height;
-}
-
 sub __get_cursor_position {
     my ( $self ) = @_;
     my ( $col, $row ) = $self->{output}->Cursor();
     return $col, $row;
 }
 
-sub __set_cursor_position {
-    my ( $self, $col, $row ) = @_;
-    $self->{output}->Cursor( $col, $row );
-}
-
-sub __up {
-    my ( $self, $rows_up ) = @_;
-    return if ! $rows_up;
-    my ( $col, $row ) = $self->__get_cursor_position;
-    $self->__set_cursor_position( $col, $row - $rows_up  );
-}
 
 sub __down {
     my ( $self, $rows_down ) = @_;
@@ -127,24 +113,6 @@ sub __down {
     $self->__set_cursor_position( $col, $row + $rows_down  );
 }
 
-sub __left {
-    my ( $self, $cols_left ) = @_;
-    return if ! $cols_left;
-    my ( $col, $row ) = $self->__get_cursor_position;
-    $self->__set_cursor_position( $col - $cols_left, $row  );
-}
-
-sub __right {
-    my ( $self, $cols_right ) = @_;
-    return if ! $cols_right;
-    my ( $col, $row ) = $self->__get_cursor_position;
-    $self->__set_cursor_position( $col + $cols_right, $row  );
-}
-
-sub __clear_screen {
-    my ( $self ) = @_;
-    $self->{output}->Cls( $self->{def_attr} );
-}
 
 sub __clear_lines_to_end_of_screen {
     my ( $self ) = @_;
@@ -168,15 +136,6 @@ sub __clear_line {
             0, $row );
 }
 
-sub __reverse {
-    my ( $self ) = @_;
-    $self->{output}->Attr( $self->{inverse} );
-}
-
-sub __reset {
-    my ( $self ) = @_;
-    $self->{output}->Attr( $self->{def_attr} );
-}
 
 sub __mark_current {
     my ( $self ) = @_;
