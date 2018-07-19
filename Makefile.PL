@@ -8,6 +8,7 @@ my %prereqs_os_specific;
 my %test_prereqs_os_specific;
 if ( $^O eq 'MSWin32' ) {
     %prereqs_os_specific = (
+        'constant'       => 0,
         'Encode'         => 0,
         'Encode::Locale' => 0,
         'Win32::Console' => 0,
@@ -40,7 +41,6 @@ WriteMakefile(
         'Test::Fatal'           => 0,
     },
     PREREQ_PM => {
-        'constant'                => 0,
         'parent'                  => 0,
         'strict'                  => 0,
         'warnings'                => 0,

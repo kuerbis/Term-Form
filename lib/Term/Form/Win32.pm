@@ -64,6 +64,20 @@ sub SHIFTED_MASK () {
     | SHIFT_PRESSED
 }
 
+
+use constant {
+    VK_CODE_PAGE_UP   => 33,
+    VK_CODE_PAGE_DOWN => 34,
+    VK_CODE_END       => 35,
+    VK_CODE_HOME      => 36,
+    VK_CODE_LEFT      => 37,
+    VK_CODE_UP        => 38,
+    VK_CODE_RIGHT     => 39,
+    VK_CODE_DOWN      => 40,
+    VK_CODE_DELETE    => 46,
+};
+
+
 sub __get_key_OS {
     my ( $self ) = @_;
     my @event = $self->{input}->Input;
@@ -79,15 +93,15 @@ sub __get_key_OS {
             if ( $ctrl_key_state & SHIFTED_MASK ) {
                 return NEXT_get_key;
             }
-            elsif ( $v_key_code == VK_END )       { return VK_END }
-            elsif ( $v_key_code == VK_HOME )      { return VK_HOME }
-            elsif ( $v_key_code == VK_LEFT )      { return VK_LEFT }
-            elsif ( $v_key_code == VK_UP )        { return VK_UP }
-            elsif ( $v_key_code == VK_DOWN )      { return VK_DOWN }
-            elsif ( $v_key_code == VK_RIGHT )     { return VK_RIGHT }
-            elsif ( $v_key_code == VK_PAGE_UP )   { return VK_PAGE_UP }
-            elsif ( $v_key_code == VK_PAGE_DOWN ) { return VK_PAGE_DOWN }
-            elsif ( $v_key_code == VK_DELETE )    { return VK_DELETE }
+            elsif ( $v_key_code == VK_CODE_END )       { return VK_END }
+            elsif ( $v_key_code == VK_CODE_HOME )      { return VK_HOME }
+            elsif ( $v_key_code == VK_CODE_LEFT )      { return VK_LEFT }
+            elsif ( $v_key_code == VK_CODE_UP )        { return VK_UP }
+            elsif ( $v_key_code == VK_CODE_DOWN )      { return VK_DOWN }
+            elsif ( $v_key_code == VK_CODE_RIGHT )     { return VK_RIGHT }
+            elsif ( $v_key_code == VK_CODE_PAGE_UP )   { return VK_PAGE_UP }
+            elsif ( $v_key_code == VK_CODE_PAGE_DOWN ) { return VK_PAGE_DOWN }
+            elsif ( $v_key_code == VK_CODE_DELETE )    { return VK_DELETE }
             else {
                 return NEXT_get_key;
             }
