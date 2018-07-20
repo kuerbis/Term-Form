@@ -1,6 +1,10 @@
 Revision history for Term::Form
 
 
+0.321   2018-07-20
+        - Stringify gcstring explicitly.
+        - Update constants Win32.
+
 0.320   2018-07-19
         - Bugfix in restore $self.
         - Catch unused keys.

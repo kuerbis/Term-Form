@@ -5,7 +5,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.320';
+our $VERSION = '0.321';
 
 use Encode qw( decode );
 
@@ -63,19 +63,6 @@ sub SHIFTED_MASK () {
     | LEFT_CTRL_PRESSED
     | SHIFT_PRESSED
 }
-
-
-use constant {
-    VK_CODE_PAGE_UP   => 33,
-    VK_CODE_PAGE_DOWN => 34,
-    VK_CODE_END       => 35,
-    VK_CODE_HOME      => 36,
-    VK_CODE_LEFT      => 37,
-    VK_CODE_UP        => 38,
-    VK_CODE_RIGHT     => 39,
-    VK_CODE_DOWN      => 40,
-    VK_CODE_DELETE    => 46,
-};
 
 
 sub __get_key_OS {

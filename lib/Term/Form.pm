@@ -4,12 +4,12 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.320';
+our $VERSION = '0.321';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
 
-use Unicode::GCString;
+use Unicode::GCString qw();
 
 use Term::Choose::LineFold  qw( line_fold );
 use Term::Choose::Constants qw( :form );
@@ -275,7 +275,7 @@ sub readline {
                 $self->{plugin}->__up( $self->{i}{pre_text_row_count} + 1 );
                 $self->{plugin}->__clear_lines_to_end_of_screen();
                 $self->__reset_term();
-                return $str;
+                return $str->as_string;
             }
             else {
                 $str->substr( $pos, 0, $key );
@@ -332,7 +332,7 @@ sub __print_readline {
         print $sep, '*' x $print_str->length(), "\r";
     }
     else {
-        print $sep, $print_str, "\r";
+        print $sep, $print_str->as_string, "\r";
     }
     $self->{plugin}->__right( $self->{i}{length_prompt} + $print_str->substr( 0, $print_pos )->columns );
 
@@ -423,7 +423,7 @@ sub __print_current_row {
     }
     else {
         $self->__print_readline( $opt, $list, $str, $pos );
-        $list->[$self->{i}{curr_row}][1] = $str;
+        $list->[$self->{i}{curr_row}][1] = $str->as_string;
     }
 }
 
@@ -907,7 +907,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.320
+Version 0.321
 
 =cut
 
