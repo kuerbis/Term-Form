@@ -1,6 +1,9 @@
 Revision history for Term::Form
 
 
+0.321_01   2018-07-29
+        - Developer release.
+
 0.321   2018-07-20
         - Stringify gcstring explicitly.
         - Update constants Win32.
