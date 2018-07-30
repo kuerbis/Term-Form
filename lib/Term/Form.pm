@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_01';
+our $VERSION = '0.321_02';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -110,7 +110,10 @@ sub __validate_options {
 sub __prepare_width {
     my ( $self ) = @_;
     my ( $term_w, $term_h ) = $self->{pg}->__get_term_size();
-    $self->{i}{term_w} = $term_w;
+    $self->{i}{term_w} = $term_w - 1;
+        # - 1 for the '<' before the string. In each case where no '<'-prefix is required (diff==0) 1 is added to
+        # avail_w in the code: __left, __bspace, __home, __ctrl_u
+        # - 1 for the cursor (or the '>') behind the string already subtracted by __get_term_size
     if ( $self->{i}{max_key_w} > $self->{i}{term_w} / 3 ) {
         $self->{i}{max_key_w} = int( $self->{i}{term_w} / 3 );
     }
@@ -162,6 +165,7 @@ sub readline {
             $self->__pre_text_row_count();
             print "\r", $self->{i}{pre_text}, "\n";
         }
+        $m->{avail_w} = $self->{i}{avail_w}; # reset avail_w to default
         $self->__print_readline( $opt, $list, $m );
         my $key = $self->{pg}->__get_key_OS();
         if ( ! defined $key ) {
@@ -243,7 +247,7 @@ sub _unshift_till_avail_w {
         unshift @{$m->{p_str}}, $_;
         $m->{p_str_w} += $_->[1];
         $m->{p_pos}++;  # so p_pos stays on the last element of the p_str ?
-        $m->{diff}--;   # diff: difference between p_pos and pos. Diff decreases when p_pos increases (pos is alwayx bigger or equal p_pos)
+        $m->{diff}--;   # diff: difference between p_pos and pos; pos is always bigger or equal p_pos
     }
 }
 
@@ -350,6 +354,10 @@ sub __left {
         else {
             _unshift_element( $m );
             $m->{p_pos}--;
+            if ( ! $m->{diff} ) { # no '<'
+                $m->{avail_w} = $self->{i}{avail_w} + 1;
+                _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
+            }
         }
     }
     else {
@@ -365,6 +373,10 @@ sub __bspace {
             _unshift_element( $m );
         }
         $m->{p_pos}--;
+        if ( ! $m->{diff} ) { # no '<'
+            $m->{avail_w} = $self->{i}{avail_w} + 1;
+            # _push_till_avail_w in _remove_pos
+        }
         _remove_pos( $m );
     }
     else {
@@ -417,6 +429,9 @@ sub _fill_from_begin {
 sub __home {
     my ( $self, $m ) = @_;
     if ( $m->{pos} > 0 ) {
+        # diff always 0     # never '<'
+        $m->{avail_w} = $self->{i}{avail_w} + 1;
+        # _push_till_avail_w in _fill_from_begin
         _fill_from_begin( $m );
     }
     else {
@@ -428,6 +443,9 @@ sub __ctrl_u {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         splice ( @{$m->{str}}, 0, $m->{pos} );
+        # diff always 0     # never '<'
+        $m->{avail_w} = $self->{i}{avail_w} + 1;
+        # _push_till_avail_w in _fill_from_begin
         _fill_from_begin( $m );
     }
     else {
@@ -478,9 +496,17 @@ sub __print_readline {
     if ( defined $self->{i}{pre} && any { $_ == $self->{i}{curr_row} - @{$self->{i}{pre}} } @{$opt->{read_only}} ) { #
         $sep = $self->{i}{sep_ro};
     }
-    my @tmp_str = @{$m->{p_str}};
-    my $tmp_pos = $m->{p_pos};
+    my @tmp_str = @{$m->{p_str}}; ##
+    my $tmp_pos = $m->{p_pos};    ##
+    my $tmp_prompt_w = $self->{i}{prompt_w};
+    if ( $m->{diff} ) {
+        $sep .= '<';
+        $tmp_prompt_w++;
+    }
     my $print_str = join( '', map { defined $_->[0] ? $_->[0] : '' } @tmp_str );
+    if ( @{$m->{p_str}} + $m->{diff} != @{$m->{str}} ) {
+        $print_str .= '>';
+    }
     if ( $opt->{no_echo} ) {
         if ( $opt->{no_echo} == 2 ) {
             print $sep;
@@ -495,7 +521,7 @@ sub __print_readline {
     if ( $tmp_pos > 0 && $print_str =~ /^(\X{$tmp_pos})/ ) {
         $width_str_pre_pos = print_columns( $1 );
     }
-    $self->{pg}->__right( $self->{i}{prompt_w} + $width_str_pre_pos );
+    $self->{pg}->__right( $tmp_prompt_w + $width_str_pre_pos );
 
 }
 
@@ -985,7 +1011,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_01
+Version 0.321_02
 
 =cut
 
