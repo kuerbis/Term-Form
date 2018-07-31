@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_03';
+our $VERSION = '0.321_04';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -174,7 +174,7 @@ sub readline {
             return;
         }
         #die "\ndiff($m->{diff}) != pos($m->{pos}) - p_pos($m->{p_pos})" if $m->{diff} != $m->{pos} - $m->{p_pos};
-        #print "\n[" . $m->{diff} . " + " . $m->{p_pos} . " != " . $m->{pos} . "]\n";
+        print "\n[" . $m->{diff} . " + " . $m->{p_pos} . " != " . $m->{pos} . "]\n";
         if    ( $key == NEXT_get_key ) { next }
         elsif ( $key == KEY_TAB      ) { next }
         elsif ( $key == CONTROL_U                       ) { $self->__ctrl_u( $m ) }
@@ -259,7 +259,7 @@ sub _remove_pos {
     $m->{p_str_w} -= $tmp->[1];
     _push_till_avail_w( $m, [ ( $#{$m->{p_str}} + $m->{diff} + 1 ) .. $#{$m->{str}} ] );
     if ( $m->{p_str_w} < $m->{avail_w} ) {
-        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] );
+        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); # ###
     }
 }
 
@@ -291,7 +291,7 @@ sub __right {
         if( $m->{p_pos} == $#{$m->{p_str}} - $m->{th} && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}} ) {
         # indirect cursor movement to the right: cursor (p_pos) stays at position,
         # instead the whole p_string moves on position to the left
-            my $tmp = $m->{str}[$m->{pos} - $m->{th}];
+            my $tmp = $m->{str}[$m->{pos} + $m->{th}];
             push @{$m->{p_str}}, $tmp;
             if ( defined $tmp->[1] ) {
                 $m->{p_str_w} += $tmp->[1];
@@ -341,7 +341,7 @@ sub _unshift_element {
         my $tmp = pop @{$m->{p_str}};
         $m->{p_str_w} -= $tmp->[1];
     }
-    _unshift_till_avail_w( $m, [ 0 .. $m->{pos} - 1 ] );
+    _unshift_till_avail_w( $m, [ 0 .. $pos - 1 ] ); # ###
 }
 
 sub __left {
@@ -349,7 +349,7 @@ sub __left {
     if ( $m->{pos} ) {
         $m->{pos}--;
         if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
-            _unshift_element( $m, $m->{pos} - $m->{th} );
+            _unshift_element( $m, $m->{pos} - ($m->{th} ) );
             $m->{p_pos}--;
             if ( ! $m->{diff} ) { # no '<'
                 $m->{avail_w} = $self->{i}{avail_w} + 1;
@@ -475,7 +475,7 @@ sub __add_char {
         $m->{diff}++;
     }
     if ( $m->{p_str_w} < $m->{avail_w} ) {
-        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] );
+        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); # ###
     }
 }
 
@@ -1011,7 +1011,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_03
+Version 0.321_04
 
 =cut
 
