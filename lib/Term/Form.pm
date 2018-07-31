@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_02';
+our $VERSION = '0.321_03';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -221,6 +221,7 @@ sub __string_and_pos {
     }
     my $m = {
         avail_w => $self->{i}{avail_w},
+        th      => 5,
         str     => [],
         pos     => 0,
         p_str   => [],
@@ -287,19 +288,14 @@ sub __right {
     my ( $self, $m ) = @_;
     if ( $m->{pos} < $#{$m->{str}} ) {
         $m->{pos}++;
-        if ( $m->{p_pos} < $#{$m->{p_str}} ) {
-            # if the cursor is not at the end of the terminal, move the cursor to the right
-            $m->{p_pos}++;
-        }
-        else {
-            # else (last of p_str) shift to whole string one char to the left
-            # p_pos stays still instead diff increases by shifting p_str to the left
-            my $tmp = $m->{str}[$m->{pos}];
+        if( $m->{p_pos} == $#{$m->{p_str}} - $m->{th} && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}} ) {
+        # indirect cursor movement to the right: cursor (p_pos) stays at position,
+        # instead the whole p_string moves on position to the left
+            my $tmp = $m->{str}[$m->{pos} - $m->{th}];
             push @{$m->{p_str}}, $tmp;
             if ( defined $tmp->[1] ) {
                 $m->{p_str_w} += $tmp->[1];
             }
-
             if ( $m->{p_str_w} > $m->{avail_w} ) {
                 my $tmp = shift @{$m->{p_str}};
                 $m->{p_str_w} -= $tmp->[1];
@@ -318,6 +314,10 @@ sub __right {
             }
             _push_till_avail_w( $m, [ ( $#{$m->{p_str}} + $m->{diff} + 1 ) .. $#{$m->{str}} ] );
         }
+        else {
+            # direct cursor movement to the right
+            $m->{p_pos}++;
+        }
     }
     elsif ( $m->{pos} == $#{$m->{str}} ) {
         #rec w if vw
@@ -331,8 +331,8 @@ sub __right {
 }
 
 sub _unshift_element {
-    my ( $m ) = @_;
-    my $tmp = $m->{str}[$m->{pos}];
+    my ( $m, $pos ) = @_;
+    my $tmp = $m->{str}[$pos];
     unshift @{$m->{p_str}}, $tmp;
     $m->{p_str_w} += $tmp->[1];
     $m->{diff}--;
@@ -348,16 +348,16 @@ sub __left {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
-        if ( $m->{p_pos} ) {
-            $m->{p_pos}--;
-        }
-        else {
-            _unshift_element( $m );
+        if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
+            _unshift_element( $m, $m->{pos} - $m->{th} );
             $m->{p_pos}--;
             if ( ! $m->{diff} ) { # no '<'
                 $m->{avail_w} = $self->{i}{avail_w} + 1;
                 _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
             }
+        }
+        else {
+            $m->{p_pos}--;
         }
     }
     else {
@@ -369,8 +369,8 @@ sub __bspace {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
-        if ( $m->{p_pos} == 0 ) {
-            _unshift_element( $m );
+        if ( $m->{p_pos} == $m->{th}  && $m->{diff} ) {
+            _unshift_element( $m, $m->{pos} - $m->{th} );
         }
         $m->{p_pos}--;
         if ( ! $m->{diff} ) { # no '<'
@@ -1011,7 +1011,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_02
+Version 0.321_03
 
 =cut
 
