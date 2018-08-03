@@ -5,7 +5,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_04';
+our $VERSION = '0.321_05';
 
 use Term::Choose::Constants qw( :screen );
 

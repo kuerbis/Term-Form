@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_04';
+our $VERSION = '0.321_05';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -93,15 +93,15 @@ sub __validate_options {
     $opt ||= {}; #
     my $sub =  ( caller( 1 ) )[3];
     $sub =~ s/^.+::([^:]+)\z/$1/;
-    for my $key ( keys %$opt ) {
-        croak $sub . ": '$key' is not a valid option name"                    if ! exists $valid->{$key};
-        next                                                                  if ! defined $opt->{$key};
-        croak $sub . ": option '$key' : a reference is not a valid value."    if ref $opt->{$key} && $valid->{$key} ne 'ARRAY';
-        next                                                                  if $valid->{$key} eq '';
-        croak $sub . ": option '$key' : '$opt->{$key}' is not a valid value." if $opt->{$key} !~ m/^$valid->{$key}\z/x;
+    for my $k ( keys %$opt ) {
+        croak $sub . ": '$k' is not a valid option name"                  if ! exists $valid->{$k};
+        next                                                              if ! defined $opt->{$k};
+        croak $sub . ": option '$k' : a reference is not a valid value."  if ref $opt->{$k} && $valid->{$k} ne 'ARRAY';
+        next                                                              if $valid->{$k} eq '';
+        croak $sub . ": option '$k' : '$opt->{$k}' is not a valid value." if $opt->{$k} !~ m/^$valid->{$k}\z/x;
     }
-    for my $key ( keys %$valid ) {
-        $opt->{$key} = $self->{$key} if ! defined $opt->{$key};
+    for my $k ( keys %$valid ) {
+        $opt->{$k} = $self->{$k} if ! defined $opt->{$k};
     }
     return $opt;
 }
@@ -119,6 +119,35 @@ sub __prepare_width {
     }
     $self->{i}{prompt_w} = $self->{i}{max_key_w} + print_columns( $self->{i}{sep} );
     $self->{i}{avail_w} = $self->{i}{term_w} - $self->{i}{prompt_w};
+}
+
+
+sub __calculate_threshold {
+    my ( $self, $m ) = @_;
+    $m->{th_l} = 0;
+    $m->{th_r} = 0;
+    if ( @{$m->{str}} > $m->{avail_w} ) {
+        my ( $tmp_w, $count ) = ( 0, 0 );
+        $tmp_w = 0;
+        $count = 0;
+        for ( @{$m->{p_str}} ) {
+            $tmp_w += $_->[1];
+            ++$count;
+            if ( $tmp_w > $self->{i}{th} ) {
+                $m->{th_l} = $count;
+                last;
+            }
+        }
+        ( $tmp_w, $count ) = ( 0, 0 );
+        for ( reverse @{$m->{p_str}} ) {
+            $tmp_w += $_->[1];
+            ++$count;
+            if ( $tmp_w > $self->{i}{th} ) {
+                $m->{th_r} = $count;
+                last;
+            }
+        }
+    }
 }
 
 
@@ -147,6 +176,8 @@ sub readline {
     $self->__prepare_width(); # after init ?
     my $list = [ [ $prompt, $opt->{default} ] ];
     $self->{i}{curr_row} = 0;
+    $self->{i}{th} = int( $self->{i}{avail_w} / 5 );
+    $self->{i}{th} = 35 if $self->{i}{th} > 35;
     my $m = $self->__string_and_pos( $list );
     local $| = 1;
     $self->__init_term();
@@ -173,8 +204,8 @@ sub readline {
             carp "EOT: $!";
             return;
         }
+        $self->__calculate_threshold( $m ); #
         #die "\ndiff($m->{diff}) != pos($m->{pos}) - p_pos($m->{p_pos})" if $m->{diff} != $m->{pos} - $m->{p_pos};
-        print "\n[" . $m->{diff} . " + " . $m->{p_pos} . " != " . $m->{pos} . "]\n";
         if    ( $key == NEXT_get_key ) { next }
         elsif ( $key == KEY_TAB      ) { next }
         elsif ( $key == CONTROL_U                       ) { $self->__ctrl_u( $m ) }
@@ -185,7 +216,7 @@ sub readline {
         elsif ( $key == VK_HOME    || $key == CONTROL_A ) { $self->__home(   $m ) }
         elsif ( $key == KEY_BSPACE || $key == CONTROL_H ) { $self->__bspace( $m ) }
         elsif ( $key == VK_DELETE  || $key == CONTROL_D ) {
-            my $leave = $self->__delete( $m );
+            my $leave = $self->__delete( $m, $key );
             if ( $leave ) {
                 print "\n";
                 $self->__reset_term();
@@ -221,7 +252,8 @@ sub __string_and_pos {
     }
     my $m = {
         avail_w => $self->{i}{avail_w},
-        th      => 5,
+        th_l    => 0,
+        th_r    => 0,
         str     => [],
         pos     => 0,
         p_str   => [],
@@ -239,48 +271,25 @@ sub __string_and_pos {
     return $m;
 }
 
-sub _unshift_till_avail_w {
-    my ( $m, $idx ) = @_;
-    for ( @{$m->{str}}[reverse @$idx] ) {
-        if ( $m->{p_str_w} + $_->[1] > $m->{avail_w} ) {
-            last;
-        }
-        unshift @{$m->{p_str}}, $_;
-        $m->{p_str_w} += $_->[1];
-        $m->{p_pos}++;  # so p_pos stays on the last element of the p_str ?
-        $m->{diff}--;   # diff: difference between p_pos and pos; pos is always bigger or equal p_pos
-    }
-}
 
-sub _remove_pos {
-    my ( $m ) = @_;
-    splice( @{$m->{str}}, $m->{pos}, 1 );
-    my $tmp = splice( @{$m->{p_str}}, $m->{p_pos}, 1 );
-    $m->{p_str_w} -= $tmp->[1];
-    _push_till_avail_w( $m, [ ( $#{$m->{p_str}} + $m->{diff} + 1 ) .. $#{$m->{str}} ] );
-    if ( $m->{p_str_w} < $m->{avail_w} ) {
-        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); # ###
-    }
-}
-
-sub _push_till_avail_w {
-    my ( $m, $idx ) = @_;
-    for ( @{$m->{str}}[@$idx] ) {
-        if ( $m->{p_str_w} + $_->[1] > $m->{avail_w} ) {
-            last;
-        }
-        push @{$m->{p_str}}, $_;
-        $m->{p_str_w} += $_->[1];
-    }
-}
-
-sub __delete {
+sub __left {
     my ( $self, $m ) = @_;
-    if ( $m->{pos} < @{$m->{str}} ) {
-        _remove_pos( $m );
+    if ( $m->{pos} ) {
+        $m->{pos}--;
+        if( $m->{p_pos} == $m->{th_l} && $m->{diff} ) {
+            _unshift_element( $m, $m->{pos} - ($m->{th_l} ) );
+            $m->{p_pos}--;
+            if ( ! $m->{diff} ) { # no '<'
+                $m->{avail_w} = $self->{i}{avail_w} + 1;
+                _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
+            }
+        }
+        else {
+            $m->{p_pos}--;
+        }
     }
     else {
-        return 1;
+        $self->{i}{beep} = 1;
     }
 }
 
@@ -288,10 +297,10 @@ sub __right {
     my ( $self, $m ) = @_;
     if ( $m->{pos} < $#{$m->{str}} ) {
         $m->{pos}++;
-        if( $m->{p_pos} == $#{$m->{p_str}} - $m->{th} && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}} ) {
+        if( $m->{p_pos} == $#{$m->{p_str}} - $m->{th_r} && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}} ) {
         # indirect cursor movement to the right: cursor (p_pos) stays at position,
         # instead the whole p_string moves on position to the left
-            my $tmp = $m->{str}[$m->{pos} + $m->{th}];
+            my $tmp = $m->{str}[$m->{pos} + $m->{th_r}];
             push @{$m->{p_str}}, $tmp;
             if ( defined $tmp->[1] ) {
                 $m->{p_str_w} += $tmp->[1];
@@ -330,47 +339,12 @@ sub __right {
     }
 }
 
-sub _unshift_element {
-    my ( $m, $pos ) = @_;
-    my $tmp = $m->{str}[$pos];
-    unshift @{$m->{p_str}}, $tmp;
-    $m->{p_str_w} += $tmp->[1];
-    $m->{diff}--;
-    $m->{p_pos}++;
-    while ( $m->{p_str_w} > $m->{avail_w} ) {
-        my $tmp = pop @{$m->{p_str}};
-        $m->{p_str_w} -= $tmp->[1];
-    }
-    _unshift_till_avail_w( $m, [ 0 .. $pos - 1 ] ); # ###
-}
-
-sub __left {
-    my ( $self, $m ) = @_;
-    if ( $m->{pos} ) {
-        $m->{pos}--;
-        if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
-            _unshift_element( $m, $m->{pos} - ($m->{th} ) );
-            $m->{p_pos}--;
-            if ( ! $m->{diff} ) { # no '<'
-                $m->{avail_w} = $self->{i}{avail_w} + 1;
-                _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
-            }
-        }
-        else {
-            $m->{p_pos}--;
-        }
-    }
-    else {
-        $self->{i}{beep} = 1;
-    }
-}
-
 sub __bspace {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
-        if ( $m->{p_pos} == $m->{th}  && $m->{diff} ) {
-            _unshift_element( $m, $m->{pos} - $m->{th} );
+        if ( $m->{p_pos} == $m->{th_l}  && $m->{diff} ) {
+            _unshift_element( $m, $m->{pos} - $m->{th_l} );
         }
         $m->{p_pos}--;
         if ( ! $m->{diff} ) { # no '<'
@@ -384,20 +358,29 @@ sub __bspace {
     }
 }
 
-sub _fill_from_end {
-    my ( $m ) = @_;
-    $m->{pos}      = @{$m->{str}};
-    @{$m->{p_str}} = ();
-    $m->{p_str_w}  = 0;
-    $m->{diff}     = @{$m->{str}};
-    $m->{p_pos}    = 0;
-    _unshift_till_avail_w( $m, [ 0 .. $#{$m->{str}} ] );
+sub __delete {
+    my ( $self, $m, $key ) = @_;
+    if ( $m->{pos} < @{$m->{str}} ) {
+        _remove_pos( $m );
+    }
+    else {
+        if ( defined $key && $key == CONTROL_D ) {
+            return 1;
+        }
+        else {
+            $self->{i}{beep} = 1;
+        }
+    }
 }
 
-sub __end {
+sub __ctrl_u {
     my ( $self, $m ) = @_;
-    if ( $m->{pos} < @{$m->{str}} ) {
-        _fill_from_end( $m );
+    if ( $m->{pos} ) {
+        splice ( @{$m->{str}}, 0, $m->{pos} );
+        # diff always 0     # never '<'
+        $m->{avail_w} = $self->{i}{avail_w} + 1;
+        # _push_till_avail_w in _fill_from_begin
+        _fill_from_begin( $m );
     }
     else {
         $self->{i}{beep} = 1;
@@ -415,17 +398,6 @@ sub __ctrl_k {
     }
 }
 
-
-sub _fill_from_begin {
-    my ( $m ) = @_;
-    $m->{pos}      = 0;
-    $m->{p_pos}    = 0;
-    $m->{diff}     = 0;
-    @{$m->{p_str}} = ();
-    $m->{p_str_w}  = 0;
-    _push_till_avail_w( $m, [ 0 .. $#{$m->{str}} ] );
-}
-
 sub __home {
     my ( $self, $m ) = @_;
     if ( $m->{pos} > 0 ) {
@@ -439,14 +411,10 @@ sub __home {
     }
 }
 
-sub __ctrl_u {
+sub __end {
     my ( $self, $m ) = @_;
-    if ( $m->{pos} ) {
-        splice ( @{$m->{str}}, 0, $m->{pos} );
-        # diff always 0     # never '<'
-        $m->{avail_w} = $self->{i}{avail_w} + 1;
-        # _push_till_avail_w in _fill_from_begin
-        _fill_from_begin( $m );
+    if ( $m->{pos} < @{$m->{str}} ) {
+        _fill_from_end( $m );
     }
     else {
         $self->{i}{beep} = 1;
@@ -474,9 +442,75 @@ sub __add_char {
         $m->{p_pos}--;
         $m->{diff}++;
     }
-    if ( $m->{p_str_w} < $m->{avail_w} ) {
-        _unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); # ###
+    #_unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); #
+}
+
+
+sub _unshift_till_avail_w {
+    my ( $m, $idx ) = @_;
+    for ( @{$m->{str}}[reverse @$idx] ) {
+        if ( $m->{p_str_w} + $_->[1] > $m->{avail_w} ) {
+            last;
+        }
+        unshift @{$m->{p_str}}, $_;
+        $m->{p_str_w} += $_->[1];
+        $m->{p_pos}++;  # so p_pos stays on the last element of the p_str ?
+        $m->{diff}--;   # diff: difference between p_pos and pos; pos is always bigger or equal p_pos
     }
+}
+
+sub _push_till_avail_w {
+    my ( $m, $idx ) = @_;
+    for ( @{$m->{str}}[@$idx] ) {
+        if ( $m->{p_str_w} + $_->[1] > $m->{avail_w} ) {
+            last;
+        }
+        push @{$m->{p_str}}, $_;
+        $m->{p_str_w} += $_->[1];
+    }
+}
+
+sub _unshift_element {
+    my ( $m, $pos ) = @_;
+    my $tmp = $m->{str}[$pos];
+    unshift @{$m->{p_str}}, $tmp;
+    $m->{p_str_w} += $tmp->[1];
+    $m->{diff}--;
+    $m->{p_pos}++;
+    while ( $m->{p_str_w} > $m->{avail_w} ) {
+        my $tmp = pop @{$m->{p_str}};
+        $m->{p_str_w} -= $tmp->[1];
+    }
+    #_unshift_till_avail_w( $m, [ 0 .. $pos - 1 ] ); #
+}
+
+sub _remove_pos {
+    my ( $m ) = @_;
+    splice( @{$m->{str}}, $m->{pos}, 1 );
+    my $tmp = splice( @{$m->{p_str}}, $m->{p_pos}, 1 );
+    $m->{p_str_w} -= $tmp->[1];
+    _push_till_avail_w( $m, [ ( $#{$m->{p_str}} + $m->{diff} + 1 ) .. $#{$m->{str}} ] );
+    #_unshift_till_avail_w( $m, [ 0 .. $m->{diff} - 1 ] ); #
+}
+
+sub _fill_from_end {
+    my ( $m ) = @_;
+    $m->{pos}      = @{$m->{str}};
+    @{$m->{p_str}} = ();
+    $m->{p_str_w}  = 0;
+    $m->{diff}     = @{$m->{str}};
+    $m->{p_pos}    = 0;
+    _unshift_till_avail_w( $m, [ 0 .. $#{$m->{str}} ] );
+}
+
+sub _fill_from_begin {
+    my ( $m ) = @_;
+    $m->{pos}      = 0;
+    $m->{p_pos}    = 0;
+    $m->{diff}     = 0;
+    @{$m->{p_str}} = ();
+    $m->{p_str_w}  = 0;
+    _push_till_avail_w( $m, [ 0 .. $#{$m->{str}} ] );
 }
 
 
@@ -496,14 +530,12 @@ sub __print_readline {
     if ( defined $self->{i}{pre} && any { $_ == $self->{i}{curr_row} - @{$self->{i}{pre}} } @{$opt->{read_only}} ) { #
         $sep = $self->{i}{sep_ro};
     }
-    my @tmp_str = @{$m->{p_str}}; ##
-    my $tmp_pos = $m->{p_pos};    ##
     my $tmp_prompt_w = $self->{i}{prompt_w};
     if ( $m->{diff} ) {
         $sep .= '<';
         $tmp_prompt_w++;
     }
-    my $print_str = join( '', map { defined $_->[0] ? $_->[0] : '' } @tmp_str );
+    my $print_str = join( '', map { defined $_->[0] ? $_->[0] : '' } @{$m->{p_str}} );
     if ( @{$m->{p_str}} + $m->{diff} != @{$m->{str}} ) {
         $print_str .= '>';
     }
@@ -517,11 +549,11 @@ sub __print_readline {
     else {
         print $sep, $print_str, "\r";
     }
-    my $width_str_pre_pos = 0;
-    if ( $tmp_pos > 0 && $print_str =~ /^(\X{$tmp_pos})/ ) {
-        $width_str_pre_pos = print_columns( $1 );
+    my $pre_pos_w = 0;
+    for ( @{$m->{p_str}}[0..$m->{p_pos}-1] ) {
+        $pre_pos_w += $_->[1];
     }
-    $self->{pg}->__right( $tmp_prompt_w + $width_str_pre_pos );
+    $self->{pg}->__right( $tmp_prompt_w + $pre_pos_w );
 
 }
 
@@ -737,6 +769,7 @@ sub fill_form {
     $self->__prepare_size( $opt, $list, $maxcols, $maxrows );
     $self->__write_first_screen( $opt, $list, 0, $auto_up );
     my $m = $self->__string_and_pos( $list );
+    $self->__calculate_threshold( $m ); #
 
     my $k = 0;
 
@@ -1011,7 +1044,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_04
+Version 0.321_05
 
 =cut
 
@@ -1046,7 +1079,8 @@ The output is removed after leaving the method, so the user can decide what rema
 
 C<BackSpace> or C<Strg-H>: Delete the character behind the cursor.
 
-C<Delete> or C<Strg-D>: Delete  the  character at point. C<readline>: return nothing if the input puffer is empty.
+C<Delete> or C<Strg-D>: Delete  the  character at point. C<readline> returns nothing if C<Strg-D> was pressed and the
+input puffer is empty.
 
 C<Strg-U>: Delete the text backward from the cursor to the beginning of the line.
 
