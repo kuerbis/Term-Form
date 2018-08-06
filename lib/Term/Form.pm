@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_06';
+our $VERSION = '0.321_07';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -124,18 +124,16 @@ sub __prepare_width {
 
 sub __calculate_threshold {
     my ( $self, $m ) = @_;
-    ##############################
+    # # # # # # # # # # # # # # #
     # threshold number of chars:
     #$m->{th_l} = $self->{i}{th};
     #$m->{th_r} = $self->{i}{th};
     #return;
-    ##############################
+    # # # # # # # # # # # # # # #
     # threshold print width:
     $m->{th_l} = 0;
     $m->{th_r} = 0;
     my ( $tmp_w, $count ) = ( 0, 0 );
-    $tmp_w = 0;
-    $count = 0;
     for ( @{$m->{p_str}} ) {
         $tmp_w += $_->[1];
         ++$count;
@@ -282,7 +280,13 @@ sub __left {
         $m->{pos}--;
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
-            _unshift_element( $m, $m->{pos} - $m->{p_pos} );
+
+            #_unshift_element( $m, $m->{pos} - $m->{p_pos} );
+             my $c = 0;
+             while ($m->{p_pos} < $m->{th_l}) {
+                _unshift_element( $m, $m->{pos} - $m->{p_pos} - $c++ )
+             }
+
             if ( ! $m->{diff} ) { # no '<'
                 $m->{avail_w} = $self->{i}{avail_w} + 1;
                 _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
@@ -303,7 +307,12 @@ sub __right {
         if(    $m->{p_pos} >= $#{$m->{p_str}} - $m->{th_r}
             && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}}
         ) {
-            _push_element( $m );
+
+            #_push_element( $m );
+            while ( $m->{p_pos} > $#{$m->{p_str}} - $m->{th_r} ) {
+                _push_element( $m );
+            }
+
         }
         $m->{p_pos}++;
     }
@@ -324,7 +333,13 @@ sub __bspace {
         $m->{pos}--;
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if ( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
-            _unshift_element( $m, $m->{pos} - $m->{p_pos} );
+
+            #_unshift_element( $m, $m->{pos} - $m->{p_pos} );
+            my $c = 0;
+            while ($m->{p_pos} < $m->{th_l}) {
+                _unshift_element( $m, $m->{pos} - $m->{p_pos} - $c++ )
+            }
+
         }
         $m->{p_pos}--;
         if ( ! $m->{diff} ) { # no '<'
@@ -1041,7 +1056,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_06
+Version 0.321_07
 
 =cut
 
