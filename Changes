@@ -1,6 +1,9 @@
 Revision history for Term::Form
 
 
+0.500   2018-08-08
+        - The only non-core dependency is now "Term::Choose" if not MSWin32 OS.
+
 0.321_08   2018-08-08
         - Developer release.
 
