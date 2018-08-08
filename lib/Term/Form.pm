@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.321_07';
+our $VERSION = '0.321_08';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -90,7 +90,6 @@ sub __set_defaults {
 
 sub __validate_options {
     my ( $self, $opt, $valid ) = @_;
-    $opt ||= {}; #
     my $sub =  ( caller( 1 ) )[3];
     $sub =~ s/^.+::([^:]+)\z/$1/;
     for my $k ( keys %$opt ) {
@@ -124,13 +123,6 @@ sub __prepare_width {
 
 sub __calculate_threshold {
     my ( $self, $m ) = @_;
-    # # # # # # # # # # # # # # #
-    # threshold number of chars:
-    #$m->{th_l} = $self->{i}{th};
-    #$m->{th_r} = $self->{i}{th};
-    #return;
-    # # # # # # # # # # # # # # #
-    # threshold print width:
     $m->{th_l} = 0;
     $m->{th_r} = 0;
     my ( $tmp_w, $count ) = ( 0, 0 );
@@ -207,8 +199,8 @@ sub readline {
             carp "EOT: $!";
             return;
         }
-        $self->__calculate_threshold( $m ); #
-        #die "\ndiff($m->{diff}) != pos($m->{pos}) - p_pos($m->{p_pos})" if $m->{diff} != $m->{pos} - $m->{p_pos};
+        #$m->{th} = $self->{i}{th};         # threshold number of chars
+        $self->__calculate_threshold( $m ); # threshold print width
         if    ( $key == NEXT_get_key ) { next }
         elsif ( $key == KEY_TAB      ) { next }
         elsif ( $key == CONTROL_U                       ) { $self->__ctrl_u( $m ) }
@@ -278,15 +270,16 @@ sub __left {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
+        ## threshold number of chars:
+        #if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
+        #    _unshift_element( $m, $m->{pos} - $m->{p_pos} );
+
+        # threshold print width:
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
-
-            #_unshift_element( $m, $m->{pos} - $m->{p_pos} );
-             my $c = 0;
-             while ($m->{p_pos} < $m->{th_l}) {
-                _unshift_element( $m, $m->{pos} - $m->{p_pos} - $c++ )
+             while ($m->{p_pos} <= $m->{th_l}) {
+                _unshift_element( $m, $m->{pos} - $m->{p_pos} );
              }
-
             if ( ! $m->{diff} ) { # no '<'
                 $m->{avail_w} = $self->{i}{avail_w} + 1;
                 _push_till_avail_w( $m, [ $#{$m->{p_str}} + 1 .. $#{$m->{str}} ] );
@@ -303,16 +296,20 @@ sub __right {
     my ( $self, $m ) = @_;
     if ( $m->{pos} < $#{$m->{str}} ) {
         $m->{pos}++;
+        ## threshold number of chars:
+        #if(    $m->{p_pos} == $#{$m->{p_str}} - $m->{th}
+        #    && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}}
+        #) {
+        #    _push_element( $m );
+
+        # threshold print width:
         # '>=' and not '==' because th_r could change and fall in front of p_pos
         if(    $m->{p_pos} >= $#{$m->{p_str}} - $m->{th_r}
             && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}}
         ) {
-
-            #_push_element( $m );
-            while ( $m->{p_pos} > $#{$m->{p_str}} - $m->{th_r} ) {
+            while ( $m->{p_pos} >= $#{$m->{p_str}} - $m->{th_r} ) {
                 _push_element( $m );
             }
-
         }
         $m->{p_pos}++;
     }
@@ -331,15 +328,16 @@ sub __bspace {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
+        ## threshold number of chars:
+        #if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
+        #    _unshift_element( $m, $m->{pos} - $m->{p_pos} );
+
+        # threshold print width:
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if ( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
-
-            #_unshift_element( $m, $m->{pos} - $m->{p_pos} );
-            my $c = 0;
-            while ($m->{p_pos} < $m->{th_l}) {
-                _unshift_element( $m, $m->{pos} - $m->{p_pos} - $c++ )
+            while ($m->{p_pos} <= $m->{th_l}) {
+                _unshift_element( $m, $m->{pos} - $m->{p_pos} );
             }
-
         }
         $m->{p_pos}--;
         if ( ! $m->{diff} ) { # no '<'
@@ -748,7 +746,8 @@ sub fill_form {
     my ( $self, $orig_list, $opt ) = @_;
     croak "'fill_form' called with no argument." if ! defined $orig_list;
     croak "'fill_form' requires an ARRAY reference as its argument." if ref $orig_list ne 'ARRAY';
-    croak "'fill_form': the (optional) second argument must be a HASH reference" if defined $opt && ref $opt ne 'HASH';
+    $opt = {} if ! defined $opt;
+    croak "'fill_form': the (optional) second argument must be a HASH reference" if ref $opt ne 'HASH';
     return [] if ! @$orig_list; ##
     my $valid = {
         auto_up      => '[ 0 1 2 ]',
@@ -1056,7 +1055,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.321_07
+Version 0.321_08
 
 =cut
 
