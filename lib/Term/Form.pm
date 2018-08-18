@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.500_01';
+our $VERSION = '0.500_02';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -21,8 +21,8 @@ BEGIN {
         $Plugin = 'Term::Choose::Win32';
     }
     else {
-        require Term::Form::Linux;
-        $Plugin = 'Term::Form::Linux';
+        require Term::Choose::Linux;
+        $Plugin = 'Term::Choose::Linux';
     }
 }
 
@@ -56,14 +56,14 @@ sub DESTROY {
 
 sub __init_term {
     my ( $self, $hide_cursor ) = @_;
-    $self->{pg}->__set_mode( $hide_cursor );
+    $self->{pg}->__set_mode( { mode => 'cbreak', hide_cursor => $hide_cursor } );
 }
 
 
 sub __reset_term {
     my ( $self, $hide_cursor ) = @_;
     if ( defined $self->{pg} ) {
-        $self->{pg}->__reset_mode( $hide_cursor );
+        $self->{pg}->__reset_mode();
     }
     for my $key ( keys %$self ) {
         next if $key eq 'pg' || $key eq 'name';
@@ -954,27 +954,31 @@ sub fill_form {
                 $up += $self->{i}{pre_text_row_count} if $self->{i}{pre_text_row_count};
                 if ( $list->[$self->{i}{curr_row}][0] eq $opt->{back} ) {                                               # if ENTER on   {back/0}: leave and return nothing
                     $self->{pg}->__up( $up );
+                    print "\r";
                     $self->{pg}->__clear_to_end_of_screen();
                     $self->__reset_term();
                     return;
                 }
                 elsif ( $list->[$self->{i}{curr_row}][0] eq $opt->{confirm} ) {                                         # if ENTER on {confirm/1}: leave and return result
                     $self->{pg}->__up( $up );
+                    print "\r";
                     $self->{pg}->__clear_to_end_of_screen();
                     splice @$list, 0, @{$self->{i}{pre}};
                     $self->__reset_term();
                     return $list;
                 }
                 if ( $auto_up == 2 ) {                                                                                  # if ENTER && "auto_up" == 2 && any row: jumps {back/0}
-                    $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_to_end_of_screen();
+                    $self->{pg}->__up( $up );                #
+                    print "\r";                              #
+                    $self->{pg}->__clear_to_end_of_screen(); #
                     my $cursor = 0; # cursor on {back}
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
                 }
                 elsif ( $self->{i}{curr_row} == $#$list ) {                                                             # if ENTER && {last row}: jumps to the {first data row/2}
-                    $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_to_end_of_screen();
+                    $self->{pg}->__up( $up );                #
+                    print "\r";                              #
+                    $self->{pg}->__clear_to_end_of_screen(); #
                     my $cursor = scalar @{$self->{i}{pre}};                                                             # cursor on the first data row
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
@@ -1024,6 +1028,7 @@ sub __print_next_page {
     $self->{i}{begin_row} = $self->{i}{end_row} + 1;
     $self->{i}{end_row}   = $self->{i}{end_row} + $self->{i}{avail_h};
     $self->{i}{end_row}   = $#$list if $self->{i}{end_row} > $#$list;
+    print "\r";
     $self->{pg}->__clear_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
@@ -1034,6 +1039,7 @@ sub __print_previous_page {
     $self->{i}{end_row}   = $self->{i}{begin_row} - 1;
     $self->{i}{begin_row} = $self->{i}{begin_row} - $self->{i}{avail_h};
     $self->{i}{begin_row} = 0 if $self->{i}{begin_row} < 0;
+    print "\r";
     $self->{pg}->__clear_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
@@ -1056,7 +1062,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.500_01
+Version 0.500_02
 
 =cut
 
