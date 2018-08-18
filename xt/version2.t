@@ -2,14 +2,13 @@ use 5.010000;
 use strict;
 use warnings;
 use Time::Piece;
-use Test::More tests => 5;
+use Test::More tests => 4;
 
 
 
 my $v             = -1;
 my $v_pod         = -1;
 my $v_linux       = -1;
-my $v_win32       = -1;
 my $v_changes     = -1;
 my $release_date  = -1;
 
@@ -35,14 +34,6 @@ while ( my $line = <$fh> ) {
 }
 close $fh;
 
-open $fh, '<', 'lib/Term/Form/Win32.pm' or die $!;
-while ( my $line = <$fh> ) {
-    if ( $line =~ /^our\s\$VERSION\s=\s'(\d\.\d\d\d(?:_\d\d)?)';/ ) {
-        $v_win32 = $1;
-    }
-}
-close $fh;
-
 open my $fh_ch, '<', 'Changes' or die $!;
 while ( my $line = <$fh_ch> ) {
     if ( $line =~ /^\s*(\d+\.\d\d\d(?:_\d\d)?)\s+(\d\d\d\d-\d\d-\d\d)\s*\z/ ) {
@@ -60,6 +51,5 @@ my $today = $t->ymd;
 
 is( $v,            $v_pod,         'Version in POD Term::Form OK' );
 is( $v,            $v_linux,       'Version in Term::Form::Linux OK' );
-is( $v,            $v_win32,       'Version in Term::Form::Win32 OK' );
 is( $v,            $v_changes,     'Version in "Changes" OK' );
 is( $release_date, $today,         'Release date in Changes is date from today' );

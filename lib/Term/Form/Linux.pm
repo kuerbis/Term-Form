@@ -5,9 +5,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.500';
-
-use Term::Choose::Constants qw( :screen );
+our $VERSION = '0.500_01';
 
 use parent 'Term::Choose::Linux';
 
@@ -22,10 +20,6 @@ BEGIN {
 my $Stty = '';
 
 
-sub new {
-    return bless {}, $_[0];
-}
-
 sub __set_mode {
     my ( $self, $hide_cursor ) = @_;
     if ( $Term_ReadKey ) {
@@ -36,12 +30,12 @@ sub __set_mode {
         chomp $Stty;
         system( "stty -echo cbreak" ) == 0 or die $?;
     }
-    print HIDE_CURSOR if $hide_cursor;
+    $self->__hide_cursor() if $hide_cursor;
 };
 
 sub __reset_mode {
     my ( $self, $hide_cursor ) = @_;
-    print SHOW_CURSOR if $hide_cursor;
+    $self->__show_cursor() if $hide_cursor;
     if ( $Term_ReadKey ) {
         Term::ReadKey::ReadMode( 'restore' );
     }
@@ -55,13 +49,6 @@ sub __reset_mode {
     }
 }
 
-sub __down  { return if ! $_[1]; print "\e[${_[1]}B"; }
-
-sub __mark_current { print UNDERLINE; } # "\e[1m\e[4m";
-
-sub __clear_lines_to_end_of_screen { print "\r", CLEAR_TO_END_OF_SCREEN; }
-
-sub __clear_line { print "\r", CLEAR_TO_END_OF_LINE; }
 
 
 1;

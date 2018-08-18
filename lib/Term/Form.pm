@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.500';
+our $VERSION = '0.500_01';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -13,16 +13,16 @@ use Term::Choose::LineFold  qw( line_fold print_columns cut_to_printwidth );
 use Term::Choose::Constants qw( :form );
 
 
-my $Plugin_Package;
+my $Plugin;
 
 BEGIN {
     if ( $^O eq 'MSWin32' ) {
-        require Term::Form::Win32;
-        $Plugin_Package = 'Term::Form::Win32';
+        require Term::Choose::Win32;
+        $Plugin = 'Term::Choose::Win32';
     }
     else {
         require Term::Form::Linux;
-        $Plugin_Package = 'Term::Form::Linux';
+        $Plugin = 'Term::Form::Linux';
     }
 }
 
@@ -43,7 +43,7 @@ sub new {
         name => $name,
     }, $class;
     $self->__set_defaults();
-    $self->{pg} = $Plugin_Package->new();
+    $self->{pg} = $Plugin->new();
     return $self;
 }
 
@@ -187,7 +187,7 @@ sub readline {
         $self->__prepare_width();
         if ( defined $self->{i}{pre_text} ) { # empty info: add newline ?
             $self->{pg}->__up( $self->{i}{pre_text_row_count} );
-            $self->{pg}->__clear_lines_to_end_of_screen();
+            $self->{pg}->__clear_to_end_of_screen();
             $self->__pre_text_row_count();
             print "\r", $self->{i}{pre_text}, "\n";
         }
@@ -227,7 +227,7 @@ sub readline {
             if ( $key eq "\n" || $key eq "\r" ) { #
                 print "\n";
                 $self->{pg}->__up( $self->{i}{pre_text_row_count} + 1 );
-                $self->{pg}->__clear_lines_to_end_of_screen();
+                $self->{pg}->__clear_to_end_of_screen();
                 $self->__reset_term();
                 return join( '', map { $_->[0] } @{$m->{str}} );
             }
@@ -529,7 +529,7 @@ sub __print_readline {
     my $key = $self->__padded_or_trimed_key( $list, $self->{i}{curr_row} );
     $self->{pg}->__clear_line();
     if ( $opt->{mark_curr} ) {
-        $self->{pg}->__mark_current();
+        $self->{pg}->__bold_underline();
         print "\r", $key;
         $self->{pg}->__reset();
     }
@@ -922,7 +922,8 @@ sub fill_form {
                 }
                 else {
                     $self->__reset_previous_row( $opt, $list, $self->{i}{curr_row} );
-                    $self->{pg}->__down( $self->{i}{end_row} - $self->{i}{curr_row} );
+                    my $rows = $self->{i}{end_row} - $self->{i}{curr_row};
+                    $self->{pg}->__down( $rows );
                     $self->{i}{curr_row} = $self->{i}{end_row};
                     $m = $self->__string_and_pos( $list );
                 }
@@ -953,27 +954,27 @@ sub fill_form {
                 $up += $self->{i}{pre_text_row_count} if $self->{i}{pre_text_row_count};
                 if ( $list->[$self->{i}{curr_row}][0] eq $opt->{back} ) {                                               # if ENTER on   {back/0}: leave and return nothing
                     $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_lines_to_end_of_screen();
+                    $self->{pg}->__clear_to_end_of_screen();
                     $self->__reset_term();
                     return;
                 }
                 elsif ( $list->[$self->{i}{curr_row}][0] eq $opt->{confirm} ) {                                         # if ENTER on {confirm/1}: leave and return result
                     $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_lines_to_end_of_screen();
+                    $self->{pg}->__clear_to_end_of_screen();
                     splice @$list, 0, @{$self->{i}{pre}};
                     $self->__reset_term();
                     return $list;
                 }
                 if ( $auto_up == 2 ) {                                                                                  # if ENTER && "auto_up" == 2 && any row: jumps {back/0}
                     $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_lines_to_end_of_screen();
+                    $self->{pg}->__clear_to_end_of_screen();
                     my $cursor = 0; # cursor on {back}
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
                 }
                 elsif ( $self->{i}{curr_row} == $#$list ) {                                                             # if ENTER && {last row}: jumps to the {first data row/2}
                     $self->{pg}->__up( $up );
-                    $self->{pg}->__clear_lines_to_end_of_screen();
+                    $self->{pg}->__clear_to_end_of_screen();
                     my $cursor = scalar @{$self->{i}{pre}};                                                             # cursor on the first data row
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
@@ -1023,7 +1024,7 @@ sub __print_next_page {
     $self->{i}{begin_row} = $self->{i}{end_row} + 1;
     $self->{i}{end_row}   = $self->{i}{end_row} + $self->{i}{avail_h};
     $self->{i}{end_row}   = $#$list if $self->{i}{end_row} > $#$list;
-    $self->{pg}->__clear_lines_to_end_of_screen();
+    $self->{pg}->__clear_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
 
@@ -1033,7 +1034,7 @@ sub __print_previous_page {
     $self->{i}{end_row}   = $self->{i}{begin_row} - 1;
     $self->{i}{begin_row} = $self->{i}{begin_row} - $self->{i}{avail_h};
     $self->{i}{begin_row} = 0 if $self->{i}{begin_row} < 0;
-    $self->{pg}->__clear_lines_to_end_of_screen();
+    $self->{pg}->__clear_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
 
@@ -1055,7 +1056,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.500
+Version 0.500_01
 
 =cut
 
