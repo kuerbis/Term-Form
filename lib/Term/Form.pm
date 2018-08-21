@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.500_02';
+our $VERSION = '0.501';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -187,9 +187,9 @@ sub readline {
         $self->__prepare_width();
         if ( defined $self->{i}{pre_text} ) { # empty info: add newline ?
             $self->{pg}->__up( $self->{i}{pre_text_row_count} );
-            $self->{pg}->__clear_to_end_of_screen();
+            $self->{pg}->__clear_lines_to_end_of_screen();
             $self->__pre_text_row_count();
-            print "\r", $self->{i}{pre_text}, "\n";
+            print $self->{i}{pre_text}, "\n";
         }
         $m->{avail_w} = $self->{i}{avail_w}; # reset to default
         $self->__print_readline( $opt, $list, $m );
@@ -199,8 +199,7 @@ sub readline {
             carp "EOT: $!";
             return;
         }
-        #$m->{th} = $self->{i}{th};         # threshold number of chars
-        $self->__calculate_threshold( $m ); # threshold print width
+        $self->__calculate_threshold( $m );
         if    ( $key == NEXT_get_key ) { next }
         elsif ( $key == KEY_TAB      ) { next }
         elsif ( $key == CONTROL_U                       ) { $self->__ctrl_u( $m ) }
@@ -227,7 +226,7 @@ sub readline {
             if ( $key eq "\n" || $key eq "\r" ) { #
                 print "\n";
                 $self->{pg}->__up( $self->{i}{pre_text_row_count} + 1 );
-                $self->{pg}->__clear_to_end_of_screen();
+                $self->{pg}->__clear_lines_to_end_of_screen();
                 $self->__reset_term();
                 return join( '', map { $_->[0] } @{$m->{str}} );
             }
@@ -270,11 +269,6 @@ sub __left {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
-        ## threshold number of chars:
-        #if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
-        #    _unshift_element( $m, $m->{pos} - $m->{p_pos} );
-
-        # threshold print width:
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
              while ($m->{p_pos} <= $m->{th_l}) {
@@ -296,13 +290,6 @@ sub __right {
     my ( $self, $m ) = @_;
     if ( $m->{pos} < $#{$m->{str}} ) {
         $m->{pos}++;
-        ## threshold number of chars:
-        #if(    $m->{p_pos} == $#{$m->{p_str}} - $m->{th}
-        #    && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}}
-        #) {
-        #    _push_element( $m );
-
-        # threshold print width:
         # '>=' and not '==' because th_r could change and fall in front of p_pos
         if(    $m->{p_pos} >= $#{$m->{p_str}} - $m->{th_r}
             && $#{$m->{p_str}} + $m->{diff} != $#{$m->{str}}
@@ -328,11 +315,6 @@ sub __bspace {
     my ( $self, $m ) = @_;
     if ( $m->{pos} ) {
         $m->{pos}--;
-        ## threshold number of chars:
-        #if( $m->{p_pos} == $m->{th} && $m->{diff} ) {
-        #    _unshift_element( $m, $m->{pos} - $m->{p_pos} );
-
-        # threshold print width:
         # '<=' and not '==' because th_l could change and fall behind p_pos
         if ( $m->{p_pos} <= $m->{th_l} && $m->{diff} ) {
             while ($m->{p_pos} <= $m->{th_l}) {
@@ -954,31 +936,27 @@ sub fill_form {
                 $up += $self->{i}{pre_text_row_count} if $self->{i}{pre_text_row_count};
                 if ( $list->[$self->{i}{curr_row}][0] eq $opt->{back} ) {                                               # if ENTER on   {back/0}: leave and return nothing
                     $self->{pg}->__up( $up );
-                    print "\r";
-                    $self->{pg}->__clear_to_end_of_screen();
+                    $self->{pg}->__clear_lines_to_end_of_screen();
                     $self->__reset_term();
                     return;
                 }
                 elsif ( $list->[$self->{i}{curr_row}][0] eq $opt->{confirm} ) {                                         # if ENTER on {confirm/1}: leave and return result
                     $self->{pg}->__up( $up );
-                    print "\r";
-                    $self->{pg}->__clear_to_end_of_screen();
+                    $self->{pg}->__clear_lines_to_end_of_screen();
                     splice @$list, 0, @{$self->{i}{pre}};
                     $self->__reset_term();
                     return $list;
                 }
                 if ( $auto_up == 2 ) {                                                                                  # if ENTER && "auto_up" == 2 && any row: jumps {back/0}
-                    $self->{pg}->__up( $up );                #
-                    print "\r";                              #
-                    $self->{pg}->__clear_to_end_of_screen(); #
+                    $self->{pg}->__up( $up );
+                    $self->{pg}->__clear_lines_to_end_of_screen();
                     my $cursor = 0; # cursor on {back}
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
                 }
                 elsif ( $self->{i}{curr_row} == $#$list ) {                                                             # if ENTER && {last row}: jumps to the {first data row/2}
-                    $self->{pg}->__up( $up );                #
-                    print "\r";                              #
-                    $self->{pg}->__clear_to_end_of_screen(); #
+                    $self->{pg}->__up( $up );
+                    $self->{pg}->__clear_lines_to_end_of_screen();
                     my $cursor = scalar @{$self->{i}{pre}};                                                             # cursor on the first data row
                     $self->__write_first_screen( $opt, $list, $cursor, $auto_up );
                     $m = $self->__string_and_pos( $list );
@@ -1028,8 +1006,7 @@ sub __print_next_page {
     $self->{i}{begin_row} = $self->{i}{end_row} + 1;
     $self->{i}{end_row}   = $self->{i}{end_row} + $self->{i}{avail_h};
     $self->{i}{end_row}   = $#$list if $self->{i}{end_row} > $#$list;
-    print "\r";
-    $self->{pg}->__clear_to_end_of_screen();
+    $self->{pg}->__clear_lines_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
 
@@ -1039,8 +1016,7 @@ sub __print_previous_page {
     $self->{i}{end_row}   = $self->{i}{begin_row} - 1;
     $self->{i}{begin_row} = $self->{i}{begin_row} - $self->{i}{avail_h};
     $self->{i}{begin_row} = 0 if $self->{i}{begin_row} < 0;
-    print "\r";
-    $self->{pg}->__clear_to_end_of_screen();
+    $self->{pg}->__clear_lines_to_end_of_screen();
     $self->__write_screen( $opt, $list );
 }
 
@@ -1062,7 +1038,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.500_02
+Version 0.501
 
 =cut
 
