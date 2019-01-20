@@ -572,7 +572,7 @@ sub __print_readline {
     }
     my $right = $tmp_prompt_w + $pre_pos_w;
     if ( $right ) {
-        print RIGHT x ( $right ); ###
+        print RIGHT x $right;
     }
 }
 
@@ -583,7 +583,7 @@ sub __padded_or_trimed_key {
     my $key_length = $self->{i}{key_w}[$idx];
     my $key = $list->[$idx][0];
     $key =~ s/\p{Space}/ /g;
-    $key =~ s/\p{C}//g; ###
+    $key =~ s/\p{C}//g;
     if ( $key_length > $self->{i}{max_key_w} ) {
         $unicode = $self->__unicode_trim( $key, $self->{i}{max_key_w} );
     }
@@ -690,7 +690,7 @@ sub __print_row {
     else {
         my $val = defined $list->[$idx][1] ? $list->[$idx][1] : '';
         $val =~ s/\p{Space}/ /g;
-        $val =~ s/\p{C}//g; ###
+        $val =~ s/\p{C}//g;
         my $sep = $self->{i}{sep};
         if ( any { $_ == $idx - @{$self->{i}{pre}} } @{$opt->{read_only}} ) {
             $sep = $self->{i}{sep_ro};
