@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.505';
+our $VERSION = '0.506';
 
 use Carp       qw( croak carp );
 use List::Util qw( any );
@@ -1075,7 +1075,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.505
+Version 0.506
 
 =cut
 
