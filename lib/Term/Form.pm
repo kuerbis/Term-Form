@@ -9,7 +9,6 @@ our $VERSION = '0.516';
 use Carp       qw( croak carp );
 use List::Util qw( any );
 
-use Term::Choose;
 use Term::Choose::LineFold  qw( line_fold print_columns cut_to_printwidth );
 use Term::Choose::Constants qw( :form :screen );
 
