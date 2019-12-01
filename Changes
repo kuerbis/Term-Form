@@ -1,6 +1,9 @@
 Revision history for Term::Form
 
 
+0.524   2019-12-01
+        - Updated Term::Choose::Util: adapt 'unicode_sprintf'.
+
 0.523   2019-11-30
         - Option color: 2 is a valid value.
 

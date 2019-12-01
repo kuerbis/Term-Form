@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.523';
+our $VERSION = '0.524';
 use Exporter 'import';
 our @EXPORT_OK = qw( fill_form read_line );
 
@@ -857,7 +857,7 @@ sub __get_row {
     }
     if ( ! defined $self->{i}{keys}[$idx] ) {
         my $key = $list->[$idx][0];
-        $self->{i}{keys}[$idx] = unicode_sprintf( $key, $self->{i}{max_key_w}, 0 );
+        $self->{i}{keys}[$idx] = unicode_sprintf( $key, $self->{i}{max_key_w} );
     }
     if ( ! defined $self->{i}{seps}[$idx] ) {
         my $sep;
@@ -1324,7 +1324,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.523
+Version 0.524
 
 =cut
 
