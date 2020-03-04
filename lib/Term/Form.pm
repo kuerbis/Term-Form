@@ -970,7 +970,6 @@ sub __prepare_meta_menu_elements {
         $self->{$meta_menu_element} = $tmp;
         push @{$self->{i}{pre}}, [ $self->{$meta_menu_element}, ];
     }
-    #$self->{i}{pre} = [  [ $self->{extra}, ], [ $self->{back}, ], [ $self->{confirm}, ] ];
 }
 
 
