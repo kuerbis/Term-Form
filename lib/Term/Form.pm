@@ -4,14 +4,14 @@ use warnings;
 use strict;
 use 5.008003;
 
-our $VERSION = '0.532';
+our $VERSION = '0.533';
 use Exporter 'import';
 our @EXPORT_OK = qw( fill_form read_line );
 
 use List::Util qw( any );
 
 use Term::Choose::LineFold        qw( line_fold print_columns cut_to_printwidth );
-use Term::Choose::Constants       qw( :keys );
+use Term::Choose::Constants       qw( :all );
 use Term::Choose::Screen          qw( :all );
 use Term::Choose::Util            qw( unicode_sprintf );
 use Term::Choose::ValidateOptions qw( validate_options );
@@ -1419,7 +1419,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.532
+Version 0.533
 
 =cut
 
