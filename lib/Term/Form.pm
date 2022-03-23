@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use 5.10.0;
 
-our $VERSION = '0.541';
+our $VERSION = '0.542';
 use Exporter 'import';
 our @EXPORT_OK = qw( fill_form read_line );
 
@@ -1081,8 +1081,8 @@ sub __prepare_footer_fmt {
 
 
 sub __write_first_screen {
-    my ( $self, $list, $curr_row ) = @_;
-    $self->{i}{curr_row} = $curr_row; ##
+    my ( $self, $list ) = @_;
+    $self->{i}{curr_row} = $self->{auto_up} ? 0 : @{$self->{i}{pre}};
     $self->{i}{begin_row} = 0;
     $self->{i}{end_row}  = ( $self->{i}{avail_h} - 1 );
     if ( $self->{i}{end_row} > $#$list ) {
@@ -1242,12 +1242,11 @@ sub fill_form {
     else {
         $list = [ @{$self->{i}{pre}}, map { [ _sanitized_string( $_->[0] ), $_->[1] ] } @$orig_list ];
     }
-    my $back_row = 0;
     $self->__length_longest_key( $list );
     $self->__prepare_width( $term_w );
     $self->__prepare_hight( $list, $term_w, $term_h );
     $self->__prepare_footer_fmt();
-    $self->__write_first_screen( $list, $back_row );
+    $self->__write_first_screen( $list );
     my $m = $self->__string_and_pos( $list );
     my $k = 0;
 
@@ -1296,7 +1295,7 @@ sub fill_form {
             $self->__prepare_width( $term_w );
             $self->__prepare_hight( $list, $term_w, $term_h );
             $self->__prepare_footer_fmt();
-            $self->__write_first_screen( $list, $back_row );
+            $self->__write_first_screen( $list );
             $m = $self->__string_and_pos( $list );
         }
         # reset $m->{avail_w} to default:
@@ -1440,7 +1439,7 @@ sub fill_form {
             else {
                 print up( $up );
                 print "\r" . clear_to_end_of_screen();
-                $self->__write_first_screen( $list, $back_row );
+                $self->__write_first_screen( $list );
                 $m = $self->__string_and_pos( $list );
             }
         }
@@ -1462,17 +1461,17 @@ sub fill_form {
             if ( $self->{auto_up} == 2 ) {
                 print up( $up );
                 print "\r" . clear_to_end_of_screen();
-                $self->__write_first_screen( $list, $back_row );
+                $self->__write_first_screen( $list );
                 $m = $self->__string_and_pos( $list );
             }
             elsif ( $self->{i}{curr_row} == $#$list ) {
                 print up( $up );
                 print "\r" . clear_to_end_of_screen();
                 if ( $self->{auto_up} == 1 ) {
-                    $self->__write_first_screen( $list, $back_row );
+                    $self->__write_first_screen( $list );
                 }
                 else {
-                    $self->__write_first_screen( $list, scalar( @{$self->{i}{pre}} ) );
+                    $self->__write_first_screen( $list );
                 }
                 $m = $self->__string_and_pos( $list );
             }
@@ -1557,7 +1556,7 @@ Term::Form - Read lines from STDIN.
 
 =head1 VERSION
 
-Version 0.541
+Version 0.542
 
 =cut
 
