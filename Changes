@@ -1,9 +1,16 @@
 Revision history for Term::Form
 
 
+0.550   2022-06-17
+    - It is now required to load Term::From::ReadLine to call 'readline'.
+    - No restrictions when clear_screen is set to '2'.
+    - Bugfix: return empty string for all non set values.
+    - Bugfix Control-X.
+    - Bugfix: load 'any'.
+
 0.547   2022-05-01
     - readline: refactoring output.
-    - Removed deprecated option 'section_separators'.
+    - fill_form: removed deprecated option 'section_separators'.
 
 0.546   2022-04-18
     - readline: new option 'history'.
