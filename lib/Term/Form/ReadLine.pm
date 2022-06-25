@@ -11,7 +11,7 @@ our @EXPORT_OK = qw( read_line );
 use parent qw( Term::Form );
 
 use Carp       qw( croak );
-use List::Util qw( none any uniq );
+use List::Util qw( none any );
 
 use Term::Choose::LineFold        qw( line_fold print_columns );
 use Term::Choose::Constants       qw( :all );
