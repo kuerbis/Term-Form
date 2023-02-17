@@ -649,7 +649,7 @@ sub __get_row {
     }
     if ( ! defined $self->{i}{keys}[$idx] ) {
         my $key = $list->[$idx][0];
-        $self->{i}{keys}[$idx] = unicode_sprintf( $key, $self->{i}{max_key_w} ); # left or right alignet ##
+        $self->{i}{keys}[$idx] = unicode_sprintf( $key, $self->{i}{max_key_w} ); # left or right aligned ##
     }
     if ( ! defined $self->{i}{seps}[$idx] ) {
         if ( any { $_ == $idx } @{$self->{i}{read_only}} ) {
