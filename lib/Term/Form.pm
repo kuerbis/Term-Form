@@ -1069,8 +1069,7 @@ sub fill_form {
             elsif ( $list->[$self->{i}{curr_row}][0] eq $self->{confirm} ) {
                 splice @$list, 0, @{$self->{i}{pre}};
                 $self->__reset( $up );
-                return [ map { [ $orig_list->[$_][0], $list->[$_][1] // '' ] } 0 .. $#{$list} ]; # documentation ##
-                #return [ map { [ $orig_list->[$_][0], $list->[$_][1] ] } 0 .. $#{$list} ];
+                return [ map { [ $orig_list->[$_][0], $list->[$_][1] // '' ] } 0 .. $#{$list} ];
             }
             if ( $self->{auto_up} == 2 || $self->{i}{curr_row} == $#$list ) {
                 print up( $up );
