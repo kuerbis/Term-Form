@@ -1,11 +1,9 @@
 Revision history for Term::Form
 
 
-0.559   2024-10-28
-    - Term::Choose minimum version 1.767.
-
-0.558   2024-05-00
+0.558   2024-10-28
     - fill_form: pause with 'No fields!' if there are no fields.
+    - Term::Choose minimum version 1.767.
 
 0.557   2024-04-26
     - readline: removed broken 'history' behaviour.
